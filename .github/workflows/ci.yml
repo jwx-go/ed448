@@ -1,6 +1,9 @@
 name: CI
 on: [push]
 
+env:
+  GOEXPERIMENT: jsonv2
+
 jobs:
   build:
     runs-on: ubuntu-latest
