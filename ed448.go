@@ -30,20 +30,36 @@ import (
 	_ "github.com/lestrrat-go/dsig-circl-ed448"
 )
 
+var eddsaEd448 = jwa.NewSignatureAlgorithm("Ed448")
+var ed448Curve = jwa.NewEllipticCurveAlgorithm("Ed448")
+
+// EdDSAEd448 returns the EdDSA Ed448 signature algorithm.
+func EdDSAEd448() jwa.SignatureAlgorithm {
+	return eddsaEd448
+}
+
+// Ed448Curve returns the Ed448 elliptic curve algorithm.
+func Ed448Curve() jwa.EllipticCurveAlgorithm {
+	return ed448Curve
+}
+
 func init() {
 	// Register Ed448 as a known signature algorithm in jwa
-	jwa.RegisterSignatureAlgorithm(jwa.EdDSAEd448())
+	jwa.RegisterSignatureAlgorithm(eddsaEd448)
+
+	// Register Ed448 as a known elliptic curve algorithm in jwa
+	jwa.RegisterEllipticCurveAlgorithm(ed448Curve)
 
 	// Register Ed448 as valid algorithm for OKP key type
-	jws.RegisterAlgorithmForKeyType(jwa.OKP(), jwa.EdDSAEd448())
+	jws.RegisterAlgorithmForKeyType(jwa.OKP(), eddsaEd448)
 
 	// Register signer/verifier that handle JWK key unwrapping.
 	// The dsig-circl-ed448 signer only accepts raw ed448 keys,
 	// so we need this layer to convert JWK keys before dispatch.
-	if err := jws.RegisterSigner(jwa.EdDSAEd448(), ed448Signer{}); err != nil {
+	if err := jws.RegisterSigner(eddsaEd448, ed448Signer{}); err != nil {
 		panic(fmt.Sprintf("jwx-go/ed448: failed to register signer: %s", err))
 	}
-	if err := jws.RegisterVerifier(jwa.EdDSAEd448(), ed448Verifier{}); err != nil {
+	if err := jws.RegisterVerifier(eddsaEd448, ed448Verifier{}); err != nil {
 		panic(fmt.Sprintf("jwx-go/ed448: failed to register verifier: %s", err))
 	}
 
@@ -54,16 +70,15 @@ func init() {
 	jwk.RegisterOKPRawKeyImporter(importEd448RawKey)
 
 	// Register jwk.Import handlers for Ed448 key types (raw ed448 key → JWK)
-	f := jwk.KeyImportFunc(importOKPEd448Key)
-	jwk.RegisterKeyImporter(ed448.PublicKey(nil), f)
-	jwk.RegisterKeyImporter(ed448.PrivateKey(nil), f)
+	jwk.RegisterKeyImporter(importEd448PublicKey)
+	jwk.RegisterKeyImporter(importEd448PrivateKey)
 }
 
 // --- Signer/Verifier (JWK key unwrapping) ---
 
 type ed448Signer struct{}
 
-func (ed448Signer) Algorithm() jwa.SignatureAlgorithm { return jwa.EdDSAEd448() }
+func (ed448Signer) Algorithm() jwa.SignatureAlgorithm { return eddsaEd448 }
 
 func (ed448Signer) Sign(key any, payload []byte) ([]byte, error) {
 	var privkey ed448.PrivateKey
@@ -87,8 +102,8 @@ func (ed448Verifier) Verify(key any, payload, signature []byte) error {
 
 func ed448PrivateKey(dst *ed448.PrivateKey, src any) error {
 	if jwkKey, ok := src.(jwk.Key); ok {
-		var raw ed448.PrivateKey
-		if err := jwk.Export(jwkKey, &raw); err != nil {
+		raw, err := jwk.Export[ed448.PrivateKey](jwkKey)
+		if err != nil {
 			return fmt.Errorf(`failed to produce ed448.PrivateKey from %T: %w`, src, err)
 		}
 		*dst = raw
@@ -174,45 +189,42 @@ func exportEd448Key(key jwk.Key, _ any) (any, error) {
 func importEd448RawKey(key any) (jwa.EllipticCurveAlgorithm, []byte, []byte, bool) {
 	switch k := key.(type) {
 	case ed448.PublicKey:
-		return jwa.Ed448(), []byte(k), nil, true
+		return ed448Curve, []byte(k), nil, true
 	case ed448.PrivateKey:
 		pub := k.Public().(ed448.PublicKey) //nolint:forcetypeassert
-		return jwa.Ed448(), []byte(pub), k.Seed(), true
+		return ed448Curve, []byte(pub), k.Seed(), true
 	}
 	return jwa.InvalidEllipticCurve(), nil, nil, false
 }
 
-func importOKPEd448Key(src any) (jwk.Key, error) {
-	switch k := src.(type) {
-	case ed448.PrivateKey:
-		key, err := jwkunsafe.NewKey(jwa.OKP())
-		if err != nil {
-			return nil, fmt.Errorf(`failed to create OKP private key: %w`, err)
-		}
-		pub := k.Public().(ed448.PublicKey) //nolint:forcetypeassert
-		if err := key.Set(jwk.OKPCrvKey, jwa.Ed448()); err != nil {
-			return nil, err
-		}
-		if err := key.Set(jwk.OKPXKey, []byte(pub)); err != nil {
-			return nil, err
-		}
-		if err := key.Set(jwk.OKPDKey, k.Seed()); err != nil {
-			return nil, err
-		}
-		return key, nil
-	case ed448.PublicKey:
-		key, err := jwkunsafe.NewPublicKey(jwa.OKP())
-		if err != nil {
-			return nil, fmt.Errorf(`failed to create OKP public key: %w`, err)
-		}
-		if err := key.Set(jwk.OKPCrvKey, jwa.Ed448()); err != nil {
-			return nil, err
-		}
-		if err := key.Set(jwk.OKPXKey, []byte(k)); err != nil {
-			return nil, err
-		}
-		return key, nil
-	default:
-		return nil, fmt.Errorf(`cannot convert key type %T to OKP jwk.Key`, src)
+func importEd448PrivateKey(src ed448.PrivateKey) (jwk.Key, error) {
+	key, err := jwkunsafe.NewKey(jwa.OKP())
+	if err != nil {
+		return nil, fmt.Errorf(`failed to create OKP private key: %w`, err)
 	}
+	pub := src.Public().(ed448.PublicKey) //nolint:forcetypeassert
+	if err := key.Set(jwk.OKPCrvKey, ed448Curve); err != nil {
+		return nil, err
+	}
+	if err := key.Set(jwk.OKPXKey, []byte(pub)); err != nil {
+		return nil, err
+	}
+	if err := key.Set(jwk.OKPDKey, src.Seed()); err != nil {
+		return nil, err
+	}
+	return key, nil
+}
+
+func importEd448PublicKey(src ed448.PublicKey) (jwk.Key, error) {
+	key, err := jwkunsafe.NewPublicKey(jwa.OKP())
+	if err != nil {
+		return nil, fmt.Errorf(`failed to create OKP public key: %w`, err)
+	}
+	if err := key.Set(jwk.OKPCrvKey, ed448Curve); err != nil {
+		return nil, err
+	}
+	if err := key.Set(jwk.OKPXKey, []byte(src)); err != nil {
+		return nil, err
+	}
+	return key, nil
 }
