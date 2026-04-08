@@ -1,0 +1,5 @@
+Changes
+=======
+
+v4.0.0-alpha1 8 Apr 2026
+  * Initial version, extracted from github.com/lestrrat-go/jwx-circl-ed448.
