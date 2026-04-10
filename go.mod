@@ -5,7 +5,7 @@ go 1.26.0
 require (
 	github.com/cloudflare/circl v1.6.3
 	github.com/lestrrat-go/dsig-circl-ed448 v1.0.0
-	github.com/lestrrat-go/jwx/v4 v4.0.0-scratch.6
+	github.com/lestrrat-go/jwx/v4 v4.0.0-scratch.13
 )
 
 require (
