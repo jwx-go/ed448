@@ -1,16 +1,12 @@
 version: 2
 updates:
-  - package-ecosystem: gomod
-    directory: /
+  - package-ecosystem: "gomod"
+    directory: "/"
     schedule:
-      interval: daily
-    labels:
-      - dependabot
-    target-branch: v4
-  - package-ecosystem: github-actions
-    directory: /
+      interval: "weekly"
+    target-branch: "develop/v4"
+  - package-ecosystem: "github-actions"
+    directory: "/"
     schedule:
-      interval: daily
-    labels:
-      - dependabot
-    target-branch: v4
+      interval: "weekly"
+    target-branch: "develop/v4"
