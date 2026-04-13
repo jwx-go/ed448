@@ -1,6 +1,9 @@
 Changes
 =======
 
+v4.0.0-alpha4 13 Apr 2026
+  * Rename `ed448.Ed448Curve()` accessor to `ed448.Curve()` to avoid package-name stutter.
+
 v4.0.0-alpha3 8 Apr 2026
   * Update to jwx/v4 API (generics, new registration functions).
 
