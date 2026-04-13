@@ -38,8 +38,8 @@ func EdDSAEd448() jwa.SignatureAlgorithm {
 	return eddsaEd448
 }
 
-// Ed448Curve returns the Ed448 elliptic curve algorithm.
-func Ed448Curve() jwa.EllipticCurveAlgorithm {
+// Curve returns the Ed448 elliptic curve algorithm.
+func Curve() jwa.EllipticCurveAlgorithm {
 	return ed448Curve
 }
 
