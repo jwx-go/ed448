@@ -12,6 +12,12 @@
 // This registers Ed448 signing/verification (via dsig-circl-ed448), JWK key
 // import/export, and algorithm-for-key-type mappings. After importing,
 // jwa.EdDSAEd448() can be used with jws.Sign, jws.Verify, jwk.Import, etc.
+//
+// Registration happens in init(). If any underlying jwx Register* call
+// returns an error, init() panics — importing this package will crash the
+// program at load time. This is the house style across all jwx-go extension
+// modules: a failed registration leaves the extension unusable, and
+// surfacing it at import time is strictly safer than silently continuing.
 package ed448
 
 import (
@@ -45,33 +51,40 @@ func Curve() jwa.EllipticCurveAlgorithm {
 
 func init() {
 	// Register Ed448 as a known signature algorithm in jwa
-	jwa.RegisterSignatureAlgorithm(eddsaEd448)
+	panicOnRegistrationError(jwa.RegisterSignatureAlgorithm(eddsaEd448))
 
 	// Register Ed448 as a known elliptic curve algorithm in jwa
-	jwa.RegisterEllipticCurveAlgorithm(ed448Curve)
+	panicOnRegistrationError(jwa.RegisterEllipticCurveAlgorithm(ed448Curve))
 
 	// Register Ed448 as valid algorithm for OKP key type
-	jws.RegisterAlgorithmForKeyType(jwa.OKP(), eddsaEd448)
+	panicOnRegistrationError(jws.RegisterAlgorithmForKeyType(jwa.OKP(), eddsaEd448))
 
 	// Register signer/verifier that handle JWK key unwrapping.
 	// The dsig-circl-ed448 signer only accepts raw ed448 keys,
 	// so we need this layer to convert JWK keys before dispatch.
-	if err := jws.RegisterSigner(eddsaEd448, ed448Signer{}); err != nil {
-		panic(fmt.Sprintf("jwx-go/ed448: failed to register signer: %s", err))
-	}
-	if err := jws.RegisterVerifier(eddsaEd448, ed448Verifier{}); err != nil {
-		panic(fmt.Sprintf("jwx-go/ed448: failed to register verifier: %s", err))
-	}
+	panicOnRegistrationError(jws.RegisterSigner(eddsaEd448, ed448Signer{}))
+	panicOnRegistrationError(jws.RegisterVerifier(eddsaEd448, ed448Verifier{}))
 
 	// Register JWK exporter for OKP:Ed448 keys (JWK → raw ed448 key)
-	jwk.RegisterKeyExporter(jwk.KeyKind("OKP:Ed448"), jwk.KeyExportFunc(exportEd448Key))
+	panicOnRegistrationError(jwk.RegisterKeyExporter(jwk.KeyKind("OKP:Ed448"), jwk.KeyExportFunc(exportEd448Key)))
 
 	// Register raw key importer for Ed448 keys
-	jwk.RegisterOKPRawKeyImporter(importEd448RawKey)
+	panicOnRegistrationError(jwk.RegisterOKPRawKeyImporter(importEd448RawKey))
 
 	// Register jwk.Import handlers for Ed448 key types (raw ed448 key → JWK)
-	jwk.RegisterKeyImporter(importEd448PublicKey)
-	jwk.RegisterKeyImporter(importEd448PrivateKey)
+	panicOnRegistrationError(jwk.RegisterKeyImporter(importEd448PublicKey))
+	panicOnRegistrationError(jwk.RegisterKeyImporter(importEd448PrivateKey))
+}
+
+// panicOnRegistrationError converts a non-nil error returned by a jwx
+// Register* call during init() into an import-time panic. The rule
+// (documented in jwx's internals.md) is that a failed Register* leaves
+// the extension unusable, so we surface it immediately instead of
+// letting the program continue in a broken state.
+func panicOnRegistrationError(err error) {
+	if err != nil {
+		panic(fmt.Sprintf("jwx-go/ed448: registration failed: %s", err))
+	}
 }
 
 // --- Signer/Verifier (JWK key unwrapping) ---
