@@ -69,7 +69,7 @@ func init() {
 	panicOnRegistrationError(jwk.RegisterKeyExporter(jwk.KeyKind("OKP:Ed448"), jwk.KeyExportFunc(exportEd448Key)))
 
 	// Register raw key importer for Ed448 keys
-	panicOnRegistrationError(jwk.RegisterOKPRawKeyImporter(importEd448RawKey))
+	panicOnRegistrationError(jwk.RegisterOKPRawKeyImporter(jwk.OKPRawKeyImporterFunc(importEd448RawKey)))
 
 	// Register jwk.Import handlers for Ed448 key types (raw ed448 key → JWK)
 	panicOnRegistrationError(jwk.RegisterKeyImporter(importEd448PublicKey))
