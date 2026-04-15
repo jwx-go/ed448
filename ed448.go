@@ -179,6 +179,9 @@ func exportEd448Key(key jwk.Key, _ any) (any, error) {
 		}
 		ret := ed448.NewKeyFromSeed(d)
 		pub := ret.Public().(ed448.PublicKey) //nolint:forcetypeassert
+		// Both operands are public material — x is the JWK public component and
+		// pub is derived from d via NewKeyFromSeed; constant-time comparison is
+		// not required.
 		if !bytes.Equal(x, pub) {
 			return nil, fmt.Errorf(`ed448: invalid x value given d value`)
 		}
