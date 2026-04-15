@@ -11,7 +11,7 @@
 //
 // This registers Ed448 signing/verification (via dsig-circl-ed448), JWK key
 // import/export, and algorithm-for-key-type mappings. After importing,
-// jwa.EdDSAEd448() can be used with jws.Sign, jws.Verify, jwk.Import, etc.
+// ed448.EdDSAEd448() can be used with jws.Sign, jws.Verify, jwk.Import, etc.
 //
 // Registration happens in init(). If any underlying jwx Register* call
 // returns an error, init() panics — importing this package will crash the
