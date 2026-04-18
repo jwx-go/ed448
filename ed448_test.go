@@ -132,7 +132,7 @@ func TestJWKRoundTrip(t *testing.T) {
 		serialized, err := json.Marshal(jwkKey)
 		require.NoError(t, err)
 
-		parsed, err := jwk.ParseKey[jwk.Key](serialized)
+		parsed, err := jwk.ParseKeyAs[jwk.Key](serialized)
 		require.NoError(t, err)
 
 		raw, err := jwk.Export[circled448.PrivateKey](parsed)
@@ -174,7 +174,7 @@ func TestJWKErrorCases(t *testing.T) {
 		truncated, err := json.Marshal(raw)
 		require.NoError(t, err)
 
-		bad, err := jwk.ParseKey[jwk.Key](truncated)
+		bad, err := jwk.ParseKeyAs[jwk.Key](truncated)
 		require.NoError(t, err, `parse should succeed; only export should fail`)
 
 		_, err = jwk.Export[circled448.PrivateKey](bad)
@@ -191,7 +191,7 @@ func TestJWKErrorCases(t *testing.T) {
 		serialized, err := json.Marshal(raw)
 		require.NoError(t, err)
 
-		bad, err := jwk.ParseKey[jwk.Key](serialized)
+		bad, err := jwk.ParseKeyAs[jwk.Key](serialized)
 		require.NoError(t, err, `parse should succeed`)
 
 		_, err = jwk.Export[circled448.PublicKey](bad)
@@ -225,7 +225,7 @@ func TestJWKErrorCases(t *testing.T) {
 		tampered, err := json.Marshal(raw)
 		require.NoError(t, err)
 
-		bad, err := jwk.ParseKey[jwk.Key](tampered)
+		bad, err := jwk.ParseKeyAs[jwk.Key](tampered)
 		require.NoError(t, err, `parse should succeed`)
 
 		_, err = jwk.Export[circled448.PrivateKey](bad)
@@ -234,7 +234,7 @@ func TestJWKErrorCases(t *testing.T) {
 	})
 
 	t.Run("malformed JSON rejected by ParseKey", func(t *testing.T) {
-		_, err := jwk.ParseKey[jwk.Key]([]byte(`{not json`))
+		_, err := jwk.ParseKeyAs[jwk.Key]([]byte(`{not json`))
 		require.Error(t, err)
 	})
 
@@ -247,7 +247,7 @@ func TestJWKErrorCases(t *testing.T) {
 		serialized, err := json.Marshal(raw)
 		require.NoError(t, err)
 
-		k, err := jwk.ParseKey[jwk.Key](serialized)
+		k, err := jwk.ParseKeyAs[jwk.Key](serialized)
 		require.NoError(t, err)
 
 		_, err = jwk.Export[circled448.PublicKey](k)
