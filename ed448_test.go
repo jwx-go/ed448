@@ -254,3 +254,40 @@ func TestJWKErrorCases(t *testing.T) {
 		require.Error(t, err, `Ed25519 key should not export as ed448`)
 	})
 }
+
+// TestRawKeyWrongLengthReturnsErrorNotPanic covers the panic-prevention
+// guarantee on the JWK import paths: an ed448.PrivateKey or
+// ed448.PublicKey of the wrong length must surface as a typed error
+// rather than a runtime panic deep inside circl.
+//
+// Without the length check, jwk.Import on an ed448.PrivateKey shorter
+// than 57 bytes panics in priv.Public() with an index-out-of-range,
+// and Import on a wrong-length ed448.PublicKey survives the conversion
+// only to fail much later with no useful error context.
+//
+// Misuse-only: the JWK round-trip path is already length-validated by
+// the JWK exporter — only direct callers that build an
+// ed448.PrivateKey / ed448.PublicKey from arbitrary bytes (custom HSM
+// glue, deserializer, config field) and hand it to jwk.Import can
+// trigger the panic. Still, a library that turns "wrong-shape input"
+// into "process crash" is a robustness defect.
+//
+// NOTE: jws.Sign / jws.Verify with a wrong-length ed448.PrivateKey
+// still panic upstream of this module — jwx core's
+// jws.AlgorithmsForKey calls key.Public() before our signer is
+// reached. Closing that vector requires a defensive change in jwx
+// core itself (a recover around the generic crypto.Signer fallback).
+// Tracked separately.
+func TestRawKeyWrongLengthReturnsErrorNotPanic(t *testing.T) {
+	t.Run("jwk.Import with wrong-length ed448.PrivateKey", func(t *testing.T) {
+		bad := circled448.PrivateKey(make([]byte, 32))
+		_, err := jwk.Import[jwk.Key](bad)
+		require.Error(t, err, `Import must reject wrong-length raw private key`)
+	})
+
+	t.Run("jwk.Import with wrong-length ed448.PublicKey", func(t *testing.T) {
+		bad := circled448.PublicKey(make([]byte, 16))
+		_, err := jwk.Import[jwk.Key](bad)
+		require.Error(t, err, `Import must reject wrong-length raw public key`)
+	})
+}

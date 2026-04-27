@@ -13,3 +13,21 @@ Go's standard library does not include Ed448 support. The only viable implementa
 ```
 go get github.com/jwx-go/ed448/v4
 ```
+
+# Constructing ed448 keys
+
+Use cloudflare/circl's own constructors:
+
+- `ed448.GenerateKey(rand.Reader)` — fresh random key
+- `ed448.NewKeyFromSeed(seed)` — deterministic from a 57-byte seed
+- PEM/DER parsers — from on-disk material
+
+These all return correctly-sized values (114-byte private key, 57-byte public key).
+
+**Do not** construct ed448 keys via raw type conversion of unvalidated bytes:
+
+```go
+bad := ed448.PrivateKey(someBytes) // unsafe if len(someBytes) != 114
+```
+
+`circl`'s `ed448.PrivateKey` is a `[]byte` alias, so this conversion is always permitted by the type system but produces a value that panics on the next call to `Sign` / `Public` / `Seed` when the length is wrong. This package's wrappers validate length before calling into circl and surface a typed error for the wrong-length case (so `jwk.Import`, `jws.Sign`, and `jws.Verify` cannot crash from a wrong-length raw type), but the safer path is to never produce a wrong-length value in the first place.
