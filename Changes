@@ -1,6 +1,10 @@
 Changes
 =======
 
+v4.0.1 28 Apr 2026
+  * Validate raw Ed448 key lengths in the OKP raw-key importer (reject
+    inputs whose length does not match Ed448 public/private key sizes).
+
 v4.0.0 19 Apr 2026
   * First stable v4 release. Tracks github.com/lestrrat-go/jwx/v4 v4.0.0.
 
