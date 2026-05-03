@@ -98,8 +98,8 @@ func init() {
 	panicOnRegistrationError(jwk.RegisterOKPRawKeyImporter(jwk.OKPRawKeyImporterFunc(importEd448RawKey)))
 
 	// Register jwk.Import handlers for Ed448 key types (raw ed448 key → JWK)
-	panicOnRegistrationError(jwk.RegisterKeyImporter(importEd448PublicKey))
-	panicOnRegistrationError(jwk.RegisterKeyImporter(importEd448PrivateKey))
+	panicOnRegistrationError(jwk.RegisterKeyImporter(jwk.KeyImportFunc[ed448.PublicKey](importEd448PublicKey)))
+	panicOnRegistrationError(jwk.RegisterKeyImporter(jwk.KeyImportFunc[ed448.PrivateKey](importEd448PrivateKey)))
 }
 
 // panicOnRegistrationError converts a non-nil error returned by a jwx
