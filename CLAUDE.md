@@ -23,6 +23,7 @@ This module registers the Ed448 curve and EdDSA-Ed448 signature algorithm via jw
 | `jwa` | `RegisterSignatureAlgorithm()` | Register EdDSA-Ed448 |
 | `jwa` | `RegisterEllipticCurveAlgorithm()` | Register Ed448 curve |
 | `jws` | `RegisterAlgorithmForKeyType()` | Associate Ed448 with OKP key type |
+| `jws` | `RegisterAlgorithmForCurve()` | Scope Ed448 to OKP keys with curve=Ed448 (so AlgorithmsForKey narrows inferred algs by curve) |
 | `jws` | `RegisterSigner()` | Ed448 signing (unwrap JWK, delegate to jwsbb) |
 | `jws` | `RegisterVerifier()` | Ed448 verification (unwrap JWK, delegate to jwsbb) |
 | `jwk` | `RegisterKeyExporter()` | Convert JWK OKP:Ed448 keys to raw ed448 keys |

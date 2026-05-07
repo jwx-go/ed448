@@ -2,6 +2,7 @@ package ed448_test
 
 import (
 	"bytes"
+	"crypto/ed25519"
 	"crypto/rand"
 	"encoding/json"
 	"testing"
@@ -289,5 +290,52 @@ func TestRawKeyWrongLengthReturnsErrorNotPanic(t *testing.T) {
 		bad := circled448.PublicKey(make([]byte, 16))
 		_, err := jwk.Import[jwk.Key](bad)
 		require.Error(t, err, `Import must reject wrong-length raw public key`)
+	})
+}
+
+// TestAlgorithmsForKeyCurveScoping pins the contract that pairing
+// the Ed448 alg with the Ed448 curve in init() scopes
+// jws.AlgorithmsForKey correctly:
+//
+//   - An Ed448 key advertises Ed448 (the curve-specific alg).
+//   - An Ed25519 key does NOT advertise Ed448. Without
+//     RegisterAlgorithmForCurve, Ed448 would be a kty-scoped
+//     (OKP-only) algorithm and would leak into every OKP key's
+//     inferred algorithm list — including sibling curves.
+//
+// Note: the polymorphic jwa.EdDSA() still appears for every OKP key
+// (including Ed448) because it is registered at the OKP kty level
+// in jwx core with no curve restrictions. That is a separate concern
+// — jwx core's dispatchEdDSAVerify is hardcoded to Ed25519, so an
+// Ed448 key paired with alg=EdDSA fails downstream rather than at
+// the AlgorithmsForKey gate.
+func TestAlgorithmsForKeyCurveScoping(t *testing.T) {
+	t.Run("Ed448 key advertises Ed448", func(t *testing.T) {
+		pub, _, err := circled448.GenerateKey(rand.Reader)
+		require.NoError(t, err, "circled448.GenerateKey should succeed")
+
+		key, err := jwk.Import[jwk.Key](pub)
+		require.NoError(t, err, "jwk.Import should succeed")
+
+		algs, err := jws.AlgorithmsForKey(key)
+		require.NoError(t, err, "jws.AlgorithmsForKey should succeed")
+
+		require.Contains(t, algs, jwxed448.EdDSAEd448(),
+			"Ed448 key must advertise Ed448 (curve-specific alg)")
+	})
+
+	t.Run("Ed25519 key does not advertise Ed448", func(t *testing.T) {
+		pub, _, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err, "ed25519.GenerateKey should succeed")
+
+		key, err := jwk.Import[jwk.Key](pub)
+		require.NoError(t, err, "jwk.Import should succeed")
+
+		algs, err := jws.AlgorithmsForKey(key)
+		require.NoError(t, err, "jws.AlgorithmsForKey should succeed")
+
+		require.NotContains(t, algs, jwxed448.EdDSAEd448(),
+			"Ed25519 key must NOT advertise Ed448; the curve "+
+				"registration scopes Ed448 to OKP keys with curve=Ed448 only")
 	})
 }
