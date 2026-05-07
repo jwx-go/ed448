@@ -1,6 +1,16 @@
 Changes
 =======
 
+v4.0.2 7 May 2026
+  * Pair the Ed448 algorithm with the Ed448 curve via
+    `jws.RegisterAlgorithmForCurve`, mirroring main jwx's pattern
+    for fully-specified EdDSA/EC algs. Without this, an Ed25519
+    `jwk.Key` would advertise `Ed448` in its `jws.AlgorithmsForKey`
+    list as a generic OKP algorithm. Defense-in-depth: existing
+    type-strict dispatchers caught the resulting confusion one
+    layer down, but the gate now lives at the algorithm/curve
+    registration.
+
 v4.0.1 28 Apr 2026
   * Validate raw Ed448 key lengths in the OKP raw-key importer (reject
     inputs whose length does not match Ed448 public/private key sizes).
